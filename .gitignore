@@ -1,0 +1,9 @@
+# Python environment
+.venv/
+__pycache__/
+
+# Output directory for snapshots
+output/
+
+# Configuration file (might want to keep it local or template it)
+config.json
