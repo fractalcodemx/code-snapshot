@@ -8,9 +8,12 @@ import argparse
 from git import Repo, InvalidGitRepositoryError
 from colorama import init, Fore, Style
 
+# Initialize colorama to make ANSI escape sequences work on Windows.
+# autoreset=True ensures that each print statement returns to the default color.
 init(autoreset=True)
 
 class Colors:
+    """A simple class to hold color constants for terminal output."""
     BLUE = Fore.BLUE
     CYAN = Fore.CYAN
     GREEN = Fore.GREEN
@@ -20,20 +23,25 @@ class Colors:
 
 def print_progress_bar(iteration, total, prefix='', suffix='', length=50, fill='█'):
     """
-    Dibuja una barra de progreso en la terminal.
+    Draws a progress bar in the terminal.
+    This provides real-time feedback for a long-running process without flooding the console.
     """
     if total == 0:
-        total = 1
+        total = 1 # Avoid ZeroDivisionError
     percent = ("{0:.1f}").format(100 * (iteration / float(total)))
     filled_length = int(length * iteration // total)
     bar = fill * filled_length + '-' * (length - filled_length)
+    # The '\r' character moves the cursor to the beginning of the line to overwrite it.
     sys.stdout.write(f'\r{prefix} |{bar}| {percent}% {suffix}')
     sys.stdout.flush()
     if iteration == total:
-        sys.stdout.write('\n')
+        sys.stdout.write('\n') # Move to the next line once the bar is complete.
 
 def get_git_commit_info(filepath, repo_path):
-    # ... (Esta función no necesita cambios)
+    """
+    Retrieves the last commit information for a specific file.
+    This provides crucial context and traceability for each piece of code.
+    """
     try:
         repo = Repo(repo_path)
         relative_filepath = os.path.relpath(filepath, repo_path)
@@ -48,10 +56,12 @@ def get_git_commit_info(filepath, repo_path):
     except InvalidGitRepositoryError:
         return "N/A (Not a Git repository at project root)"
     except Exception:
+        # This can happen if the file is new and not yet tracked by Git.
         return "N/A (File not tracked by Git)"
 
 def generate_code_snapshot(config_path="config.json", limit=-1):
-    # 1. Leer la configuración
+    # 1. Load the user's configuration from the JSON file.
+    # This makes the tool flexible without needing to change the code itself.
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
@@ -77,10 +87,14 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
     print(f"{Colors.CYAN}  INITIALIZING SNAPSHOT FOR PROJECT: {os.path.basename(project_root)}")
     print(f"{Colors.BLUE}=======================================================================")
 
-    # --- FASE 1: DESCUBRIMIENTO Y FILTRADO DE ARCHIVOS ---
+    # --- PHASE 1: DISCOVER AND FILTER FILES ---
+    # We walk the directory tree once to build a complete list of files to process.
+    # This is necessary to get an accurate total count for the progress bar *before*
+    # we start writing the output file.
     print(f"{Colors.CYAN}Phase 1: Discovering and filtering files...")
     files_to_process = []
     for root, dirs, files in os.walk(project_root, topdown=True):
+        # By modifying `dirs` in-place, we prevent `os.walk` from descending into ignored directories.
         dirs[:] = [d for d in dirs if not any(pattern in os.path.join(os.path.relpath(root, project_root), d).replace(os.sep, '/') for pattern in ignored_patterns)]
         for file in files:
             relative_file_path = os.path.join(os.path.relpath(root, project_root), file)
@@ -95,6 +109,7 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
         print(f"{Colors.YELLOW}No files found to process with the current filters.")
         return
 
+    # Apply the file limit if the --limit flag was used for a quick test run.
     if limit > 0:
         print(f"{Colors.YELLOW}Found {total_files_found} files. Processing the first {limit} due to --limit flag.\n")
         files_to_process = files_to_process[:limit]
@@ -103,15 +118,17 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
 
     total_files_to_process = len(files_to_process)
 
-    # --- FASE 2: PROCESAMIENTO Y ESCRITURA DEL SNAPSHOT ---
+    # --- PHASE 2: PROCESS AND WRITE THE SNAPSHOT ---
+    # Now that we have the final list of files, we can generate the output.
     print(f"{Colors.CYAN}Phase 2: Generating snapshot...")
 
     project_name_slug = re.sub(r'[^a-zA-Z0-9_-]', '', os.path.basename(project_root)).lower()
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = os.path.join(output_dir, f"{project_name_slug}_snapshot_{timestamp}.txt")
 
-    # --- CONFIGURACIÓN DE FORMATO DE SALIDA ---
-    # Define el ancho total para las líneas separadoras. ¡Cambia este valor para ajustar todo el formato!
+    # --- OUTPUT FORMATTING CONFIGURATION ---
+    # Define the total line width for the output file.
+    # Changing this single variable will adjust all separators for a consistent format.
     LINE_WIDTH = 150
     HEADER_LINE = "=" * LINE_WIDTH
     SEPARATOR_LINE = "-" * LINE_WIDTH
@@ -130,7 +147,9 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
             relative_path = os.path.relpath(file_path, project_root).replace(os.sep, '/')
             commit_info = get_git_commit_info(file_path, project_root)
 
-            # --- CALCULO DINÁMICO DE SEPARADORES ---
+            # --- DYNAMICALLY CALCULATE SEPARATOR PADDING ---
+            # Calculate the number of dashes needed to fill the line up to LINE_WIDTH.
+            # This ensures perfect alignment regardless of the tag's length.
             start_tag = "--- FILE START "
             content_tag = "--- FILE CONTENT "
             end_tag = "--- FILE END "
@@ -144,6 +163,8 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
                 with open(file_path, 'r', encoding='utf-8') as infile:
                     outfile.write(infile.read())
             except Exception as e:
+                # If a single file fails to read, we log the error in the snapshot
+                # but continue processing the rest of the files.
                 outfile.write(f"ERROR: Could not read file: {e}\n")
             outfile.write(f"\n{end_tag}{'-' * (LINE_WIDTH - len(end_tag))}\n")
             outfile.write(f"{SEPARATOR_LINE}\n\n")
@@ -157,6 +178,8 @@ def generate_code_snapshot(config_path="config.json", limit=-1):
     print(f"{Colors.BLUE}=======================================================================")
 
 if __name__ == "__main__":
+    # This is the script's entry point.
+    # We configure and parse command-line arguments here.
     parser = argparse.ArgumentParser(description='Generate a code snapshot from a project directory.')
     parser.add_argument('--limit', type=int, default=-1,
                         help='Limit the number of files to process for a quick test run.')
@@ -165,4 +188,5 @@ if __name__ == "__main__":
     if not os.path.exists("output"):
         os.makedirs("output")
 
+    # Pass the parsed arguments (like the file limit) to the main function.
     generate_code_snapshot(config_path="config.json", limit=args.limit)

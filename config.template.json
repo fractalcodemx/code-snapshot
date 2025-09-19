@@ -4,6 +4,7 @@
     "ignored_patterns": [
         "node_modules",
         "vendor",
+        ".venv",
         ".git",
         ".vscode",
         ".DS_Store",
