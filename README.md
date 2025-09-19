@@ -65,21 +65,45 @@ Follow these steps to set up the environment and prepare the tool for use.
         "ignored_patterns": [
             "node_modules",
             "vendor",
+            ".venv",
             ".git",
             ".vscode",
+            ".DS_Store",
             "output"
         ],
         "ignored_file_extensions": [
-            ".md",
-            ".log",
-            ".map",
-            ".svg",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".ico"
-        ]
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".svg",
+        ".ico",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".eot",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".rar",
+        ".7z",
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".psd",
+        ".ai",
+        ".sketch",
+        ".db",
+        ".sqlite",
+        ".md",
+        ".map"
+    ]
     }
     ```
 
