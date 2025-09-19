@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/logo.png" alt="Code Snapshot Logo" width="150">
+</p>
+
 # Code Snapshot by Fractalcode
 
 **Code Snapshot** is a Python CLI tool that captures a complete, self-contained snapshot of a software project. It consolidates the file structure, the content of each file, and key metadata from the Git history into a single text file (`.txt`).
